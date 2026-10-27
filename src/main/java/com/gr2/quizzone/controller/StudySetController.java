@@ -39,6 +39,15 @@ public class StudySetController {
         return ResponseEntity.ok(ApiResponse.ok(studySetService.getMine(user)));
     }
 
+    /** GET /api/study-sets/continue — Set đang học dở gần nhất (completionRate > 0 && < 1.0) */
+    @GetMapping("/continue")
+    public ResponseEntity<ApiResponse<StudySet>> getContinueSet(
+            @AuthenticationPrincipal User user) {
+        return studySetService.getContinueSet(user)
+                .map(set -> ResponseEntity.ok(ApiResponse.ok(set)))
+                .orElse(ResponseEntity.ok(ApiResponse.ok("Không có set đang học dở", null)));
+    }
+
     /** GET /api/study-sets/{id} */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<StudySet>> getById(@PathVariable Long id) {

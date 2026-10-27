@@ -5,6 +5,7 @@ import com.gr2.quizzone.model.Flashcard;
 import com.gr2.quizzone.model.StudySet;
 import com.gr2.quizzone.model.User;
 import com.gr2.quizzone.repository.FlashcardRepository;
+import com.gr2.quizzone.repository.StudyProgressRepository;
 import com.gr2.quizzone.repository.StudySetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,19 +22,56 @@ public class StudySetService {
 
     private final StudySetRepository studySetRepository;
     private final FlashcardRepository flashcardRepository;
+    private final StudyProgressRepository progressRepository;
 
     /** Lấy danh sách (public + của mình), có tìm kiếm */
     public Page<StudySet> getAll(User user, String search, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        if (search != null && !search.isBlank()) {
-            return studySetRepository.searchPublicOrOwned(user, search, pageable);
-        }
-        return studySetRepository.findPublicOrOwned(user, pageable);
+        Page<StudySet> result = (search != null && !search.isBlank())
+                ? studySetRepository.searchPublicOrOwned(user, search, pageable)
+                : studySetRepository.findPublicOrOwned(user, pageable);
+        result.forEach(set -> enrichWithProgress(user, set));
+        return result;
     }
 
     /** Study sets của riêng user */
     public List<StudySet> getMine(User user) {
-        return studySetRepository.findByOwnerOrderByCreatedAtDesc(user);
+        List<StudySet> sets = studySetRepository.findByOwnerOrderByCreatedAtDesc(user);
+        sets.forEach(set -> enrichWithProgress(user, set));
+        return sets;
+    }
+
+    /**
+     * GET /api/study-sets/continue — Set đang học dở gần nhất.
+     * Tìm set có ít nhất 1 thẻ đã học (KNOWN/LEARNING) nhưng completionRate < 1.0.
+     * Trả Optional.empty() nếu không có set nào phù hợp.
+     */
+    public Optional<StudySet> getContinueSet(User user) {
+        List<StudySet> inProgress = progressRepository.findInProgressSetsByUser(
+                user.getId(), PageRequest.of(0, 20));  // lấy tối đa 20, tìm cái đầu tiên < 100%
+        return inProgress.stream()
+                .filter(set -> {
+                    long total = flashcardRepository.countByStudySet(set);
+                    long known = progressRepository.countKnownCards(user, set);
+                    return total > 0 && known < total;  // còn thẻ chưa biết
+                })
+                .findFirst()
+                .map(set -> {
+                    enrichWithProgress(user, set);
+                    return set;
+                });
+    }
+
+    /**
+     * Gắn knownCards + completionRate vào StudySet (cho list response).
+     * Dùng countByStudySet để tránh trigger LAZY load flashcards collection.
+     * completionRate: 0.0 → 1.0 (tỷ lệ, không phải %)
+     */
+    private void enrichWithProgress(User user, StudySet set) {
+        long total = flashcardRepository.countByStudySet(set);
+        long known = progressRepository.countKnownCards(user, set);
+        set.setKnownCards((int) known);
+        set.setCompletionRate(total > 0 ? Math.round(known * 1000.0 / total) / 1000.0 : 0.0);
     }
 
     /** Chi tiết một study set */

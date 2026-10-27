@@ -202,6 +202,28 @@ Authorization: Bearer {{token}}
 
 ###
 
+### [10b] Set đang học dở gần nhất (continue studying)
+GET {{baseUrl}}/api/study-sets/continue
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET /api/study-sets/continue", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.success === true, "success phải là true");
+    if (response.body.data) {
+      client.assert(typeof response.body.data.id === "number", "id phải là số");
+      client.assert(typeof response.body.data.knownCards === "number", "knownCards phải có");
+      client.assert(typeof response.body.data.completionRate === "number", "completionRate phải có");
+      client.assert(response.body.data.completionRate < 1.0, "completionRate phải < 1.0 (học dở)");
+      client.log("▶️ Tiếp tục học: " + response.body.data.title + " (" + Math.round(response.body.data.completionRate * 100) + "%)");
+    } else {
+      client.log("ℹ️ Không có set đang học dở");
+    }
+  });
+%}
+
+###
+
 ### [11] Thêm flashcard vào set
 # @name addCard
 POST {{baseUrl}}/api/study-sets/{{newSetId}}/flashcards
@@ -316,6 +338,32 @@ Authorization: Bearer {{token}}
     client.assert(response.status === 200, "Expected 200");
     client.assert(typeof response.body.data.totalKnownCards === "number", "totalKnownCards phải là số");
     client.assert(typeof response.body.data.avgScorePercentage === "number", "avgScorePercentage phải là số");
+    client.assert(typeof response.body.data.currentStreak === "number", "currentStreak phải là số");
+    client.assert(Array.isArray(response.body.data.weeklyActivity), "weeklyActivity phải là array");
+    client.assert(response.body.data.weeklyActivity.length === 7, "weeklyActivity phải có đúng 7 ngày");
+    client.log("🔥 Streak: " + response.body.data.currentStreak + " ngày");
+  });
+%}
+
+###
+
+### [17b] Tiến độ từng bộ học (per-set progress)
+GET {{baseUrl}}/api/progress/sets
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Progress per set", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(Array.isArray(response.body.data), "data phải là array");
+    if (response.body.data.length > 0) {
+      const first = response.body.data[0];
+      client.assert(typeof first.studySetId === "number", "studySetId phải là số");
+      client.assert(typeof first.studySetTitle === "string", "studySetTitle phải là string");
+      client.assert(typeof first.knownCards === "number", "knownCards phải là số");
+      client.assert(typeof first.totalCards === "number", "totalCards phải là số");
+      client.assert(first.totalCards >= first.knownCards, "totalCards >= knownCards");
+      client.log("📊 Sets có progress: " + response.body.data.length);
+    }
   });
 %}
 

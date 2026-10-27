@@ -46,6 +46,13 @@ public class StudyController {
         return ResponseEntity.ok(ApiResponse.ok(studyService.getProgressSummary(user)));
     }
 
+    /** GET /api/progress/sets — Tiến độ từng bộ học (knownCards / totalCards) */
+    @GetMapping("/api/progress/sets")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getProgressPerSet(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.ok(studyService.getProgressPerSet(user)));
+    }
+
     // ── Quiz Results ─────────────────────────────────────────
 
     /** POST /api/quiz-results */

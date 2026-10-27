@@ -8,9 +8,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -87,12 +89,59 @@ public class StudyService {
         double avgScore = quizResultRepository.avgScorePercentage(user);
         long totalSets = studySetRepository.findByOwnerOrderByCreatedAtDesc(user).size();
 
-        Map<String, Object> summary = new HashMap<>();
+        // currentStreak: đếm số ngày liên tiếp (kể từ hôm nay lùi về) user có ít nhất 1 thẻ học
+        int streak = 0;
+        LocalDate today = LocalDate.now();
+        for (int i = 0; i < 365; i++) {
+            LocalDate day = today.minusDays(i);
+            LocalDateTime from = day.atStartOfDay();
+            LocalDateTime to = day.plusDays(1).atStartOfDay();
+            if (progressRepository.hasActivityBetween(user, from, to)) {
+                streak++;
+            } else {
+                break; // chuỗi bị gián đoạn
+            }
+        }
+
+        // weeklyActivity: 7 ngày (T2->CN) theo tuần hiện tại
+        LocalDate monday = today.with(DayOfWeek.MONDAY);
+        String[] dayLabels = {"T2", "T3", "T4", "T5", "T6", "T7", "CN"};
+        List<Map<String, Object>> weeklyActivity = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate day = monday.plusDays(i);
+            LocalDateTime from = day.atStartOfDay();
+            LocalDateTime to = day.plusDays(1).atStartOfDay();
+            long cardsStudied = progressRepository.countCardsStudiedBetween(user, from, to);
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("day", dayLabels[i]);
+            entry.put("cardsStudied", cardsStudied);
+            weeklyActivity.add(entry);
+        }
+
+        Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("totalKnownCards", totalKnown);
         summary.put("totalQuizzesTaken", totalQuizzes);
         summary.put("avgScorePercentage", Math.round(avgScore * 10.0) / 10.0);
         summary.put("totalStudySets", totalSets);
+        summary.put("currentStreak", streak);
+        summary.put("weeklyActivity", weeklyActivity);
         return summary;
+    }
+
+    /** Tiến độ từng bộ học: knownCards / totalCards cho Progress Dashboard per-set section */
+    public List<Map<String, Object>> getProgressPerSet(User user) {
+        List<StudySet> studiedSets = progressRepository.findDistinctStudySetsByUser(user);
+        return studiedSets.stream().map(set -> {
+            long known = progressRepository.countKnownCards(user, set);
+            long total = flashcardRepository.findByStudySetOrderByPosition(set).size();
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("studySetId", set.getId());
+            item.put("studySetTitle", set.getTitle());
+            item.put("subject", set.getSubject());
+            item.put("knownCards", known);
+            item.put("totalCards", total);
+            return item;
+        }).collect(Collectors.toList());
     }
 
     // ── Notifications ────────────────────────────────────────

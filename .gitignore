@@ -1,0 +1,45 @@
+### Maven ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+HELP.md
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### VS Code ###
+.vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+### Secrets – KHÔNG commit các file chứa thông tin nhạy cảm ###
+src/main/resources/application-local.properties
+src/main/resources/application-prod.properties
+http-client.private.env.json
+
+### Build output ###
+*.jar
+*.war
+*.class
+
+### Logs ###
+*.log
+logs/
+
+### Test output ###
+/target/surefire-reports/
+*.dump
+*.dumpstream
+
+### IntelliJ HTTP Client – response files (chứa data thật) ###
+*.json
+!http-client.env.json

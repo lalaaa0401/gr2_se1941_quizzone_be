@@ -35,6 +35,15 @@ public class User implements UserDetails {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(length = 20)
+    private String phone;
+
+    @Column(length = 200)
+    private String school;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

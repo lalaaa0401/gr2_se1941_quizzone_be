@@ -29,11 +29,17 @@ public class AuthRequest {
 
         @NotBlank(message = "Tên không được để trống")
         private String fullName;
+
+        private String phone;   // optional
+        private String school;  // optional
     }
 
     @Data
     public static class UpdateProfile {
         private String fullName;
         private String avatarUrl;
+        private String phone;
+        private String school;
+        private String bio;
     }
 }

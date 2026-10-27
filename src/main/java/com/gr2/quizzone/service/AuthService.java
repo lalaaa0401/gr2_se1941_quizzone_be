@@ -30,6 +30,8 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
+                .phone(request.getPhone())
+                .school(request.getSchool())
                 .build();
 
         userRepository.save(user);
@@ -50,8 +52,11 @@ public class AuthService {
 
     /** Cập nhật profile */
     public User updateProfile(User currentUser, AuthRequest.UpdateProfile request) {
-        if (request.getFullName() != null) currentUser.setFullName(request.getFullName());
+        if (request.getFullName() != null)  currentUser.setFullName(request.getFullName());
         if (request.getAvatarUrl() != null) currentUser.setAvatarUrl(request.getAvatarUrl());
+        if (request.getPhone() != null)     currentUser.setPhone(request.getPhone());
+        if (request.getSchool() != null)    currentUser.setSchool(request.getSchool());
+        if (request.getBio() != null)       currentUser.setBio(request.getBio());
         return userRepository.save(currentUser);
     }
 
@@ -62,6 +67,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .avatarUrl(user.getAvatarUrl())
+                .phone(user.getPhone())
+                .school(user.getSchool())
+                .bio(user.getBio())
                 .build();
     }
 }

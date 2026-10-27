@@ -61,4 +61,12 @@ public class StudySet {
     public int getCardCount() {
         return flashcards == null ? 0 : flashcards.size();
     }
+
+    // Được gắn bởi service sau khi join với bảng study_progress
+    // @Transient = không map DB, chỉ xuất hiện trong JSON response
+    @Transient
+    private Integer knownCards;
+
+    @Transient
+    private Double completionRate;
 }

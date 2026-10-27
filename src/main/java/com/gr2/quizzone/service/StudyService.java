@@ -80,6 +80,11 @@ public class StudyService {
         return quizResultRepository.findByUserAndStudySetOrderByTakenAtDesc(user, set);
     }
 
+    /** 5 quiz gần nhất của user (cho section Hoạt động gần đây) */
+    public List<QuizResult> getRecentQuizResults(User user) {
+        return quizResultRepository.findTop5ByUserOrderByTakenAtDesc(user);
+    }
+
     // ── Progress Dashboard Summary ───────────────────────────
 
     /** Tổng hợp cho Progress Dashboard (fl_chart) */

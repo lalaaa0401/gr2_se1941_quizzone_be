@@ -64,6 +64,13 @@ public class StudyController {
         return ResponseEntity.status(201).body(ApiResponse.ok("Lưu kết quả thành công", result));
     }
 
+    /** GET /api/quiz-results/mine — 5 quiz gần nhất của user (cho Hoạt động gần đây) */
+    @GetMapping("/api/quiz-results/mine")
+    public ResponseEntity<ApiResponse<List<QuizResult>>> getRecentQuizResults(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.ok(studyService.getRecentQuizResults(user)));
+    }
+
     /** GET /api/quiz-results/{setId} */
     @GetMapping("/api/quiz-results/{setId}")
     public ResponseEntity<ApiResponse<List<QuizResult>>> getQuizHistory(

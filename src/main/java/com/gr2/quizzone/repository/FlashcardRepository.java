@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface FlashcardRepository extends JpaRepository<Flashcard, Long> {
     List<Flashcard> findByStudySetOrderByPosition(StudySet studySet);
+    long countByStudySet(StudySet studySet);
 }

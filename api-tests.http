@@ -1,0 +1,489 @@
+### QuizZone API – IntelliJ HTTP Client
+### Cách dùng:
+###   1. Mở file này trong IntelliJ editor
+###   2. Nhấn ▶ "Run All Requests in File" ở thanh toolbar phía trên
+###   3. Chạy [1] Register và [2] Login trước — token tự lưu
+### ===========================================================
+
+@baseUrl = http://localhost:8080
+
+
+# ============================================================
+# AUTH
+# ============================================================
+
+### [1] Đăng ký user mới
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "demo@quizzone.com",
+  "password": "12345678",
+  "fullName": "Demo User"
+}
+
+> {%
+  if (response.status === 201) {
+    client.global.set("token", response.body.data.token);
+    client.global.set("userId", response.body.data.userId);
+    client.log("✅ Đăng ký thành công! Token đã được lưu.");
+  }
+%}
+
+###
+
+### [2] Đăng nhập (lưu token tự động)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@quizzone.com",
+  "password": "12345678"
+}
+
+> {%
+  client.test("Login thành công", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.success === true, "Expected success = true");
+    client.assert(response.body.data.token !== null, "Token phải có giá trị");
+  });
+  if (response.body.data && response.body.data.token) {
+    client.global.set("token", response.body.data.token);
+    client.global.set("userId", response.body.data.userId);
+    client.log("✅ Token đã lưu: " + response.body.data.token.substring(0, 30) + "...");
+  }
+%}
+
+###
+
+### [3] Sai mật khẩu → phải trả 401
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@quizzone.com",
+  "password": "wrongpassword"
+}
+
+> {%
+  client.test("Sai password → 401", () => {
+    client.assert(response.status === 401, "Expected 401 Unauthorized");
+    client.assert(response.body.success === false, "Expected success = false");
+  });
+%}
+
+###
+
+### [4] Lấy thông tin user hiện tại
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET /auth/me", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.email === "demo@quizzone.com", "Email phải khớp");
+    client.assert(!response.body.data.password, "Password KHÔNG được lộ trong response");
+  });
+%}
+
+###
+
+### [5] Cập nhật profile
+PUT {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Demo User (Updated)",
+  "avatarUrl": "https://i.pravatar.cc/150?u=demo"
+}
+
+> {%
+  client.test("Cập nhật profile", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.fullName === "Demo User (Updated)", "fullName phải được cập nhật");
+  });
+%}
+
+
+# ============================================================
+# STUDY SETS
+# ============================================================
+
+### [6] Lấy danh sách study sets (tất cả public)
+GET {{baseUrl}}/api/study-sets?page=0&size=5
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET /api/study-sets", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.content.length > 0, "Phải có ít nhất 1 study set");
+    client.assert(response.body.data.totalElements > 0, "totalElements > 0");
+  });
+  if (response.body.data.content.length > 0) {
+    client.global.set("existingSetId", response.body.data.content[0].id);
+  }
+%}
+
+###
+
+### [7] Tìm kiếm study set theo từ khóa
+GET {{baseUrl}}/api/study-sets?search=Flutter&page=0&size=10
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Tìm kiếm Flutter", () => {
+    client.assert(response.status === 200, "Expected 200");
+    if (response.body.data.content.length > 0) {
+      const title = response.body.data.content[0].title.toLowerCase();
+      client.assert(title.includes("flutter") || title.includes("dart"),
+        "Kết quả tìm kiếm phải chứa 'Flutter' hoặc 'Dart'");
+    }
+  });
+%}
+
+###
+
+### [8] Tạo study set mới
+# @name createSet
+POST {{baseUrl}}/api/study-sets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "My First Study Set",
+  "description": "Bộ thẻ test từ HTTP client",
+  "subject": "Testing",
+  "isPublic": true
+}
+
+> {%
+  client.test("Tạo study set", () => {
+    client.assert(response.status === 201, "Expected 201 Created");
+    client.assert(response.body.data.id !== null, "Phải có id");
+    client.assert(response.body.data.title === "My First Study Set", "Title phải khớp");
+    client.assert(!response.body.data.owner.password, "Password KHÔNG được lộ trong owner");
+  });
+  if (response.body.data) {
+    client.global.set("newSetId", response.body.data.id);
+    client.log("✅ Tạo set ID: " + response.body.data.id);
+  }
+%}
+
+###
+
+### [9] Xem chi tiết study set vừa tạo
+GET {{baseUrl}}/api/study-sets/{{newSetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET study set by ID", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.id === client.global.get("newSetId"), "ID phải khớp");
+    client.assert(Array.isArray(response.body.data.flashcards), "flashcards phải là array");
+  });
+%}
+
+###
+
+### [10] Study sets của tôi
+GET {{baseUrl}}/api/study-sets/mine
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET /api/study-sets/mine", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(Array.isArray(response.body.data), "data phải là array");
+    client.assert(response.body.data.length >= 1, "Phải có ít nhất 1 set của mình");
+  });
+%}
+
+###
+
+### [11] Thêm flashcard vào set
+# @name addCard
+POST {{baseUrl}}/api/study-sets/{{newSetId}}/flashcards
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "term": "Widget",
+  "definition": "Thành phần UI cơ bản nhất trong Flutter. Mọi thứ đều là Widget.",
+  "position": 0
+}
+
+> {%
+  client.test("Thêm flashcard", () => {
+    client.assert(response.status === 201, "Expected 201");
+    client.assert(response.body.data.term === "Widget", "term phải khớp");
+  });
+  if (response.body.data) {
+    client.global.set("cardId", response.body.data.id);
+    client.log("✅ Thêm thẻ ID: " + response.body.data.id);
+  }
+%}
+
+###
+
+### [12] Thêm flashcard thứ 2
+POST {{baseUrl}}/api/study-sets/{{newSetId}}/flashcards
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "term": "StatelessWidget",
+  "definition": "Widget không có state. build() chỉ chạy một lần. Dùng cho UI tĩnh.",
+  "position": 1
+}
+
+###
+
+### [13] Kiểm tra cardCount sau khi thêm 2 thẻ
+GET {{baseUrl}}/api/study-sets/{{newSetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("cardCount = 2 sau khi thêm 2 thẻ", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.flashcards.length === 2, "Phải có 2 thẻ");
+    client.assert(response.body.data.cardCount === 2, "cardCount phải là 2");
+  });
+%}
+
+###
+
+### [14] Cập nhật study set
+PUT {{baseUrl}}/api/study-sets/{{newSetId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "My First Study Set – Updated"
+}
+
+> {%
+  client.test("Cập nhật study set", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.title === "My First Study Set – Updated", "Title đã được update");
+  });
+%}
+
+
+# ============================================================
+# PROGRESS (Flashcard Study Mode)
+# ============================================================
+
+### [15] Cập nhật trạng thái thẻ → KNOWN
+PUT {{baseUrl}}/api/progress/{{newSetId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "flashcardId": {{cardId}},
+  "status": "KNOWN"
+}
+
+> {%
+  client.test("Cập nhật progress → KNOWN", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.status === "KNOWN", "Status phải là KNOWN");
+  });
+%}
+
+###
+
+### [16] Lấy progress của set
+GET {{baseUrl}}/api/progress/{{newSetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET progress của set", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(Array.isArray(response.body.data), "data phải là array");
+  });
+%}
+
+###
+
+### [17] Progress Dashboard Summary
+GET {{baseUrl}}/api/progress/summary
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Progress summary", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(typeof response.body.data.totalKnownCards === "number", "totalKnownCards phải là số");
+    client.assert(typeof response.body.data.avgScorePercentage === "number", "avgScorePercentage phải là số");
+  });
+%}
+
+
+# ============================================================
+# QUIZ RESULTS
+# ============================================================
+
+### [18] Lưu kết quả quiz
+POST {{baseUrl}}/api/quiz-results
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "studySetId": {{newSetId}},
+  "score": 2,
+  "totalQuestions": 2
+}
+
+> {%
+  client.test("Lưu quiz result", () => {
+    client.assert(response.status === 201, "Expected 201");
+    client.assert(response.body.data.score === 2, "Score phải là 2");
+    client.assert(response.body.data.percentage === 100.0, "100% khi đúng hết");
+  });
+%}
+
+###
+
+### [19] Lịch sử quiz của set
+GET {{baseUrl}}/api/quiz-results/{{newSetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET quiz history", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.data.length >= 1, "Phải có ít nhất 1 kết quả quiz");
+  });
+%}
+
+
+# ============================================================
+# NOTIFICATIONS
+# ============================================================
+
+### [20] Lấy danh sách thông báo
+GET {{baseUrl}}/api/notifications
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET notifications", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(Array.isArray(response.body.data), "data phải là array");
+    // Sau khi lưu quiz result, phải có ít nhất 1 notification
+    client.assert(response.body.data.length >= 1, "Phải có thông báo sau khi quiz");
+    if (response.body.data.length > 0) {
+      client.global.set("notifId", response.body.data[0].id);
+    }
+  });
+%}
+
+###
+
+### [21] Số thông báo chưa đọc (dùng cho badge)
+GET {{baseUrl}}/api/notifications/unread-count
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Unread count", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(typeof response.body.data === "number", "data phải là số");
+    client.log("📬 Thông báo chưa đọc: " + response.body.data);
+  });
+%}
+
+###
+
+### [22] Đánh dấu một thông báo đã đọc
+PUT {{baseUrl}}/api/notifications/{{notifId}}/read
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Mark notification as read", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.success === true, "success phải là true");
+  });
+%}
+
+###
+
+### [23] Đánh dấu tất cả đã đọc
+PUT {{baseUrl}}/api/notifications/read-all
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Mark all read", () => {
+    client.assert(response.status === 200, "Expected 200");
+  });
+%}
+
+
+# ============================================================
+# CHAT / MESSAGES
+# ============================================================
+
+### [24] Gửi tin nhắn vào study set
+POST {{baseUrl}}/api/messages/{{existingSetId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "Mọi người học bộ thẻ này chưa? Tôi thấy rất hữu ích!"
+}
+
+> {%
+  client.test("Gửi tin nhắn", () => {
+    client.assert(response.status === 201, "Expected 201");
+    client.assert(response.body.data.content !== null, "content phải có giá trị");
+    client.assert(response.body.data.sender.email === "demo@quizzone.com", "Sender phải là user hiện tại");
+    client.assert(!response.body.data.sender.password, "Password sender KHÔNG được lộ");
+  });
+%}
+
+###
+
+### [25] Lấy tin nhắn của study set (polling)
+GET {{baseUrl}}/api/messages/{{existingSetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("GET messages (polling)", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(Array.isArray(response.body.data), "data phải là array");
+    client.log("💬 Số tin nhắn: " + response.body.data.length);
+  });
+%}
+
+
+# ============================================================
+# CLEANUP – Xoá data test
+# ============================================================
+
+### [26] Xoá flashcard
+DELETE {{baseUrl}}/api/study-sets/flashcards/{{cardId}}
+Authorization: Bearer {{token}}
+
+###
+
+### [27] Xoá study set đã tạo
+DELETE {{baseUrl}}/api/study-sets/{{newSetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Xoá study set", () => {
+    client.assert(response.status === 200, "Expected 200");
+    client.assert(response.body.success === true, "success phải là true");
+  });
+  client.log("🧹 Đã dọn dẹp xong!");
+%}
+
+###
+
+### [28] Kiểm tra sau khi xoá → 400 Not Found
+GET {{baseUrl}}/api/study-sets/{{newSetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Sau khi xoá → 400", () => {
+    client.assert(response.status === 400, "Expected 400 sau khi xoá");
+  });
+%}

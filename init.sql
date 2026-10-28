@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS users (
   password    VARCHAR(255)  NOT NULL,
   full_name   VARCHAR(100)  NOT NULL,
   avatar_url  VARCHAR(255)  DEFAULT NULL,
+  phone       VARCHAR(20)   DEFAULT NULL,
+  school      VARCHAR(200)  DEFAULT NULL,
+  bio         TEXT          DEFAULT NULL,
+  role        ENUM('USER','ADMIN') NOT NULL DEFAULT 'USER',
+  is_blocked  TINYINT(1)    NOT NULL DEFAULT 0,
   created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -97,8 +102,9 @@ CREATE TABLE IF NOT EXISTS messages (
 -- ============================================================
 
 -- User mẫu (password: "12345678" đã BCrypt)
-INSERT IGNORE INTO users (email, password, full_name) VALUES
-  ('test@quizzone.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Test User');
+INSERT IGNORE INTO users (email, password, full_name, role) VALUES
+  ('test@quizzone.com',  '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Test User',       'USER'),
+  ('admin@quizzone.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lBji', 'QuizZone Admin',  'ADMIN');
 
 -- Study set mẫu
 INSERT IGNORE INTO study_sets (title, description, subject, owner_id, is_public) VALUES

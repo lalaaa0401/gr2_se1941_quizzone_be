@@ -21,4 +21,8 @@ public interface QuizResultRepository extends JpaRepository<QuizResult, Long> {
     double avgScorePercentage(@Param("user") User user);
 
     long countByUser(User user);
+
+    // Đếm số user distinct có hoạt động quiz từ thời điểm given
+    @Query("SELECT COUNT(DISTINCT r.user.id) FROM QuizResult r WHERE r.takenAt >= :since")
+    long countDistinctUsersSince(@Param("since") java.time.LocalDateTime since);
 }

@@ -8,6 +8,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -25,6 +26,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity   // bật @PreAuthorize / @PostAuthorize
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -40,6 +42,8 @@ public class SecurityConfig {
                 // Chỉ 2 endpoint này public — /auth/me và /auth/me PUT cần JWT
                 .requestMatchers("/auth/login", "/auth/register").permitAll()
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
+                // Admin endpoints — chỉ ROLE_ADMIN
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Tất cả còn lại cần JWT
                 .anyRequest().authenticated()
             )
@@ -49,6 +53,13 @@ public class SecurityConfig {
                     response.sendError(
                         jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED,
                         "Unauthorized: " + authException.getMessage()
+                    )
+                )
+                // Trả 403 khi đủ JWT nhưng không đủ role
+                .accessDeniedHandler((request, response, accessDeniedException) ->
+                    response.sendError(
+                        jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN,
+                        "Forbidden: insufficient role"
                     )
                 )
             )

@@ -70,6 +70,7 @@ public class AuthService {
                 .phone(user.getPhone())
                 .school(user.getSchool())
                 .bio(user.getBio())
+                .role(user.getRole() != null ? user.getRole().name() : "USER")
                 .build();
     }
 }

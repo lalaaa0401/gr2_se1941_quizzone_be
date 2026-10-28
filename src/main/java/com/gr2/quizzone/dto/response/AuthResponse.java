@@ -1,5 +1,6 @@
 package com.gr2.quizzone.dto.response;
 
+import com.gr2.quizzone.model.User;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,4 +15,5 @@ public class AuthResponse {
     private String phone;
     private String school;
     private String bio;
+    private String role;   // "USER" hoặc "ADMIN"
 }

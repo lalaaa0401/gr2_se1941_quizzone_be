@@ -130,6 +130,20 @@ public class StudySetService {
         return flashcardRepository.save(card);
     }
 
+    /** Cập nhật flashcard (chỉ owner của study set) */
+    public Flashcard updateFlashcard(User user, Long cardId, StudyRequest.CreateFlashcard request) {
+        Flashcard card = flashcardRepository.findById(cardId)
+                .orElseThrow(() -> new IllegalArgumentException("Flashcard không tồn tại"));
+        if (!card.getStudySet().getOwner().getId().equals(user.getId())) {
+            throw new SecurityException("Chỉ owner mới có thể sửa thẻ");
+        }
+        if (request.getTerm() != null)       card.setTerm(request.getTerm());
+        if (request.getDefinition() != null) card.setDefinition(request.getDefinition());
+        if (request.getImageUrl() != null)   card.setImageUrl(request.getImageUrl());
+        if (request.getPosition() != null)   card.setPosition(request.getPosition());
+        return flashcardRepository.save(card);
+    }
+
     /** Xoá flashcard */
     public void deleteFlashcard(User user, Long cardId) {
         Flashcard card = flashcardRepository.findById(cardId)

@@ -91,6 +91,16 @@ public class StudySetController {
         return ResponseEntity.status(201).body(ApiResponse.ok("Thêm thẻ thành công", card));
     }
 
+    /** PUT /api/study-sets/flashcards/{cardId} */
+    @PutMapping("/flashcards/{cardId}")
+    public ResponseEntity<ApiResponse<Flashcard>> updateFlashcard(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long cardId,
+            @RequestBody StudyRequest.CreateFlashcard request) {
+        Flashcard updated = studySetService.updateFlashcard(user, cardId, request);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật thẻ thành công", updated));
+    }
+
     /** DELETE /api/flashcards/{id} */
     @DeleteMapping("/flashcards/{cardId}")
     public ResponseEntity<ApiResponse<Void>> deleteFlashcard(

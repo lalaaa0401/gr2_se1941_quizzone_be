@@ -108,6 +108,46 @@ public class AdminController {
     }
 
     /**
+     * PUT /api/admin/users/{id}/role
+     * Body: { "role": "ADMIN" | "USER" }
+     * Đổi role của user. Không được đổi role của chính mình.
+     */
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<?> updateRole(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal User currentUser) {
+
+        String roleStr = body.get("role");
+        if (roleStr == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Thiếu trường 'role'"));
+        }
+
+        User.Role newRole;
+        try {
+            newRole = User.Role.valueOf(roleStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Role không hợp lệ: " + roleStr + ". Chấp nhận: ADMIN, USER"));
+        }
+
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User không tồn tại: " + id));
+
+        if (target.getId().equals(currentUser.getId())) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Không được đổi role của chính mình"));
+        }
+
+        target.setRole(newRole);
+        userRepository.save(target);
+
+        Map<String, Object> data = Map.of("userId", id, "role", newRole.name());
+        return ResponseEntity.ok(ApiResponse.ok("Đã cập nhật quyền", data));
+    }
+
+    /**
      * DELETE /api/admin/study-sets/{id}
      * Admin xoá bất kỳ study set nào (kể cả không phải của mình).
      */

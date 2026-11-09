@@ -74,6 +74,14 @@ CREATE TABLE IF NOT EXISTS quiz_results (
   FOREIGN KEY (study_set_id) REFERENCES study_sets(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Quiz Result Wrong Cards (join table) ─────────────────────
+CREATE TABLE IF NOT EXISTS quiz_result_wrong_cards (
+  quiz_result_id  BIGINT NOT NULL,
+  flashcard_id    BIGINT NOT NULL,
+  FOREIGN KEY (quiz_result_id) REFERENCES quiz_results(id) ON DELETE CASCADE,
+  FOREIGN KEY (flashcard_id)   REFERENCES flashcards(id)   ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── Notifications ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS notifications (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,

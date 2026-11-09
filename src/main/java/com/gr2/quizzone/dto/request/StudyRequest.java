@@ -36,6 +36,8 @@ public class StudyRequest {
         @NotNull private Long studySetId;
         @NotNull private Integer score;
         @NotNull private Integer totalQuestions;
+        /** IDs của các flashcard trả lời sai (optional) */
+        private List<Long> wrongCardIds;
     }
 
     @Data

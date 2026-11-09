@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "quiz_results")
@@ -40,6 +42,14 @@ public class QuizResult {
 
     @Column(name = "taken_at", updatable = false)
     private LocalDateTime takenAt;
+
+    /** IDs của các flashcard trả lời sai — lưu để FE có thể ôn lại */
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "quiz_result_wrong_cards",
+            joinColumns = @JoinColumn(name = "quiz_result_id"))
+    @Column(name = "flashcard_id")
+    @Builder.Default
+    private List<Long> wrongCardIds = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

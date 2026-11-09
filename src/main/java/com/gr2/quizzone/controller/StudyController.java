@@ -79,6 +79,13 @@ public class StudyController {
         return ResponseEntity.ok(ApiResponse.ok(studyService.getQuizHistory(user, setId)));
     }
 
+    /** GET /api/quiz-results/{quizResultId}/details — Danh sách thẻ trả lời sai */
+    @GetMapping("/api/quiz-results/{quizResultId}/details")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getQuizResultDetails(
+            @PathVariable Long quizResultId) {
+        return ResponseEntity.ok(ApiResponse.ok(studyService.getQuizResultDetails(quizResultId)));
+    }
+
     // ── Notifications ────────────────────────────────────────
 
     /** GET /api/notifications */

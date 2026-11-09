@@ -57,10 +57,15 @@ public class StudyService {
         StudySet set = studySetRepository.findById(request.getStudySetId())
                 .orElseThrow(() -> new IllegalArgumentException("Study set không tồn tại"));
 
+        List<Long> wrongIds = request.getWrongCardIds() != null
+                ? request.getWrongCardIds()
+                : List.of();
+
         QuizResult result = QuizResult.builder()
                 .user(user).studySet(set)
                 .score(request.getScore())
                 .totalQuestions(request.getTotalQuestions())
+                .wrongCardIds(new java.util.ArrayList<>(wrongIds))
                 .build();
         QuizResult saved = quizResultRepository.save(result);
 
@@ -83,6 +88,29 @@ public class StudyService {
     /** 5 quiz gần nhất của user (cho section Hoạt động gần đây) */
     public List<QuizResult> getRecentQuizResults(User user) {
         return quizResultRepository.findTop5ByUserOrderByTakenAtDesc(user);
+    }
+
+    /** Chi tiết quiz result: danh sách các thẻ trả lời sai */
+    public Map<String, Object> getQuizResultDetails(Long quizResultId) {
+        QuizResult result = quizResultRepository.findById(quizResultId)
+                .orElseThrow(() -> new IllegalArgumentException("Quiz result không tồn tại"));
+
+        List<Map<String, Object>> wrongCards = result.getWrongCardIds().stream()
+                .map(cardId -> flashcardRepository.findById(cardId)
+                        .map(card -> {
+                            Map<String, Object> m = new LinkedHashMap<>();
+                            m.put("id", card.getId());
+                            m.put("term", card.getTerm());
+                            m.put("definition", card.getDefinition());
+                            return m;
+                        })
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("wrongCards", wrongCards);
+        return response;
     }
 
     // ── Progress Dashboard Summary ───────────────────────────
